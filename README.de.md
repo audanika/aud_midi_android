@@ -10,6 +10,7 @@ Teil der aud_midi-Familie, siehe [aud_midi](https://github.com/audanika/aud_midi
 - MidiManager über jnigen, AMidi für I/O mit Zeitstempeln
 - Java-Shim für abstrakte Callback-Klassen, kein MethodChannel
 - MidiDeviceService und MidiUmpDeviceService
+- BLE-Peripheral über BluetoothGattServer
 
 ## Stand
 
