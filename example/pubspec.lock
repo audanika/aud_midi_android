@@ -22,14 +22,14 @@ packages:
       path: "../../aud_midi_core"
       relative: true
     source: path
-    version: "0.0.0"
+    version: "0.1.0"
   aud_midi_standard:
     dependency: "direct main"
     description:
       path: "../../aud_midi_standard"
       relative: true
     source: path
-    version: "0.0.0"
+    version: "0.1.0"
   characters:
     dependency: transitive
     description:
