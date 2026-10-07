@@ -16,7 +16,7 @@ environment:
 
 dev_dependencies:
   dna_audanika: ^0.0.2
-  ffigen: ^22.0.0
+  ffigen: ^23.0.0
   helix: ^1.11.0
   jnigen: ^1.0.1
   lints: ^6.1.0
@@ -24,7 +24,7 @@ dev_dependencies:
 dependencies:
   aud_midi_core: ^0.0.0
   aud_midi_standard: ^0.0.0
-  ffi: ^2.1.4
+  ffi: ^2.2.0
   jni: ^1.1.0
 
 # Builds the Java shim in android/ into Android apps. The package has no
