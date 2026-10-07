@@ -5,14 +5,14 @@
 // found in the LICENSE file in the root of this package.
 
 import 'package:aud_midi_android/aud_midi_android.dart';
+import 'package:aud_midi_core/aud_midi_core.dart';
 import 'package:test/test.dart';
 
 void main() {
-  group('Example', () {
-    group('greet()', () {
-      test('should greet the name', () {
-        expect(const Example('World').greet(), 'Hello World!');
-      });
+  group('MidiAndroidPlatform', () {
+    test('is implemented with JNI, which needs Android', () {
+      MidiAndroidPlatform create() => MidiAndroidJniPlatform();
+      expect(create, throwsA(isA<MidiUnsupported>()));
     });
   });
 }

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The virtual device of the app: what other apps send to "virtual in"
+     reaches the app, what the app sends leaves through "virtual out". -->
+<devices>
+  <device manufacturer="Audanika" product="aud_midi virtual">
+    <input-port name="virtual in" />
+    <output-port name="virtual out" />
+  </device>
+</devices>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A Universal MIDI Packet loopback device (API 33): port 0 echoes. -->
+<devices>
+  <device manufacturer="Audanika" product="aud_midi UMP loopback">
+    <port name="ump loop" />
+  </device>
+</devices>

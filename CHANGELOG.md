@@ -6,6 +6,7 @@
 
 - Add boilerplate
 - Add package dependencies
+- Add the Android backend with Java shim and AMidi
 
 ### Changed
 

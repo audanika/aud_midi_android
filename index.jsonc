@@ -6,17 +6,20 @@
 
 {
   "name": "aud_midi_android",
-  "summary": "The Android backend of aud_midi: android.media.midi through JNI, AMidi through FFI, plus a small Java shim.",
+  "summary": "The Android backend of aud_midi: android.media.midi through jnigen bindings and a Java shim, AMidi through FFI for timestamped sends, BLE-MIDI, static virtual devices, NsdManager advertising.",
   "domain": [
-    "Android MIDI backend"
+    "Android MIDI backend (MidiManager, UMP devices API 33, AMidi API 29)",
+    "Java shim: receiver buffer, device/scan callbacks, MidiDeviceService/MidiUmpDeviceService, context provider, loopback test services",
+    "jnigen + ffigen bindings, verified on the emulator incl. R8"
   ],
   "interfaces": {
     "uses": {
-      "aud_midi_core": "backend contracts",
-      "aud_midi_standard": "models"
+      "aud_midi_core": "MidiBackend, MidiBluetoothBackend, MidiVirtualPortsBackend, MidiServiceAdvertiser, MidiClockMapper, MidiException",
+      "aud_midi_standard": "port/device/capability models, MidiBytesPacket, MidiUmpPacket, Ump",
+      "jni": "JNI runtime of the jnigen bindings, interface implementation from Dart"
     },
     "usedBy": {
-      "aud_midi": "consumes this package"
+      "aud_midi": "AndroidMidiBackend on Android; MidiAndroidServiceAdvertiser and MidiAndroidMulticastLock for the AppleMIDI session"
     }
   }
 }
