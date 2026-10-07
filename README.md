@@ -13,6 +13,7 @@ Part of the aud_midi family, see [aud_midi](https://github.com/audmidi/aud_midi)
 - Java shim for the abstract callback classes, no MethodChannel
 - The app's own virtual devices: `MidiDeviceService`, `MidiUmpDeviceService`
 - `NsdManager` advertising and a multicast lock for network sessions
+- BLE peripheral through BluetoothGattServer
 
 ## State
 

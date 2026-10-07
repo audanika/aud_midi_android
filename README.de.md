@@ -13,6 +13,7 @@ Teil der aud_midi-Familie, siehe [aud_midi](https://github.com/audmidi/aud_midi)
 - Java-Shim für die abstrakten Callback-Klassen, kein MethodChannel
 - Eigene virtuelle Geräte der App: `MidiDeviceService`, `MidiUmpDeviceService`
 - `NsdManager`-Ankündigung und Multicast-Lock für Netzwerk-Sessions
+- BLE-Peripheral über BluetoothGattServer
 
 ## Stand
 
