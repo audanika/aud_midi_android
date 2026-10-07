@@ -1,9 +1,8 @@
 name: aud_midi_android
 description: "Android backend for aud_midi: android.media.midi via JNI, AMidi via FFI"
-version: 0.0.0
-homepage: https://github.com/audanika/aud_midi_android
-repository: https://github.com/audanika/aud_midi_android
-publish_to: none
+version: 0.1.0
+homepage: https://github.com/audmidi/aud_midi_android
+repository: https://github.com/audmidi/aud_midi_android
 topics:
   - midi
   - audio
@@ -13,20 +12,27 @@ platforms:
 
 environment:
   sdk: ^3.12.2
+  flutter: ">=3.35.6"
 
 dev_dependencies:
   dna_audanika: ^0.0.2
+  ffigen: ^23.0.0
   helix: ^1.11.0
+  jnigen: ^1.0.1
   lints: ^6.1.0
   test: ^1.32.0
 dependencies:
-  aud_midi_core:
-    git:
-      url: git@github.com:audanika/aud_midi_core.git
-      tag_pattern: "{{version}}"
-    version: ^0.0.0
-  aud_midi_standard:
-    git:
-      url: git@github.com:audanika/aud_midi_standard.git
-      tag_pattern: "{{version}}"
-    version: ^0.0.0
+  aud_midi_core: ^0.1.0
+  aud_midi_standard: ^0.1.0
+  ffi: ^2.2.0
+  jni: ^1.1.0
+
+# Builds the Java shim in android/ into Android apps. The package has no
+# Flutter dependency: the plugin class only exists so that Flutter compiles
+# the shim, it registers no channel.
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.audanika.aud_midi_android
+        pluginClass: AudMidiAndroidPlugin

@@ -36,6 +36,10 @@ linter:
 #     - path/to/excluded/files/**
 
 analyzer:
+  # The Flutter example app has its own analysis options and dependencies;
+  # it is analyzed from its own folder after `flutter pub get`.
+  exclude:
+    - example/**
   language:
     strict-casts: true
     strict-inference: true

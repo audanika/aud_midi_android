@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The UMP virtual device of the app (API 33): one bidirectional port. -->
+<devices>
+  <device manufacturer="Audanika" product="aud_midi UMP virtual">
+    <port name="ump virtual" />
+  </device>
+</devices>

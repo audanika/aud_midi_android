@@ -1,26 +1,233 @@
 # aud_midi_android
 
-The Android backend of aud_midi: android.media.midi through JNI, AMidi through FFI, plus a small Java shim.
+The Android backend of aud_midi: `android.media.midi` through jnigen
+bindings and a small Java shim, AMidi through FFI for sending.
 
-Part of the aud_midi family, see [aud_midi](https://github.com/audanika/aud_midi).
+Part of the aud_midi family, see [aud_midi](https://github.com/audmidi/aud_midi).
 
 ## Goals
 
-- USB, Bluetooth LE and virtual devices
-- MidiManager via jnigen, AMidi for timestamped I/O
-- Java shim for abstract callback classes, no MethodChannel
-- MidiDeviceService and MidiUmpDeviceService
+- USB, Bluetooth LE and virtual MIDI devices as ports
+- MIDI 1.0 byte-stream devices and, from API 33, Universal MIDI Packets
+- Android timestamps on input, AMidi with timestamps on output
+- Java shim for the abstract callback classes, no MethodChannel
+- The app's own virtual devices: `MidiDeviceService`, `MidiUmpDeviceService`
+- `NsdManager` advertising and a multicast lock for network sessions
 - BLE peripheral through BluetoothGattServer
 
 ## State
 
-Boilerplate only. The implementation follows in later tickets, see the plan in [aud_midi_pm](https://github.com/audanika/aud_midi_pm/blob/main/doc/2026-Q4/tickets/2026-10-06-aud_midi_01-initial-midi-implementation.md).
+`AndroidMidiBackend` (name `android`) implements `MidiBackend` of
+[aud_midi_core](https://github.com/audmidi/aud_midi_core):
+
+- Ports: every port of every device the MIDI service knows: USB,
+  Bluetooth and the virtual devices of other apps; from API 33 both
+  transports (`getDevicesForTransport`). Android's input port, data into
+  the device, is an output of the app and vice versa. Ids are
+  `android:<device id>:in|out:<port number>`; Android assigns a new device
+  id on re-plug, the `fingerprint` finds the candidates. Byte-stream
+  devices speak MIDI 1.0; UMP devices take their protocol from
+  `getDefaultProtocol` and exchange UMP words, big-endian in Android's byte
+  arrays.
+- Receiving: the shim's `AudMidiReceiver` copies every chunk with its
+  timestamp into a buffer of 64 KiB per port and signals the isolate once;
+  the isolate drains all chunks with one JNI call. A full buffer drops the
+  newest chunk and counts it (`queueOverflow`). The timestamps,
+  `System.nanoTime()` = `CLOCK_MONOTONIC`, become package times through
+  `MidiClockMapper`, measured again every 10 s and on hotplug.
+- Sending: AMidi `sendWithTimestamp` from API 29, `MidiInputPort.send`
+  below or when AMidi refuses a device (`nativeError` diagnostic). Chunks
+  have at most 1012 bytes and never split a UMP. Outputs to USB and
+  Bluetooth devices report `scheduledSend` and `cancelPending`: the MIDI
+  service holds the data until they are due and drops them on a flush.
+  A virtual device gets the timestamp with the data and decides itself, so
+  the engine schedules for it.
+- Hotplug: `AudMidiDeviceCallback` per transport → added, removed and
+  changed ports; the open ports of a removed device are closed.
+- `virtualPorts` (static): the ports of the app's own `AudMidiDeviceService`
+  and `AudMidiUmpDeviceService` (or subclasses) from the manifest, listed
+  with `isOwn`. `create(spec)` hands out a declared port, named like the
+  spec or the first free one; Android creates none at runtime.
+- `bluetooth`: Bluetooth LE scan with the BLE-MIDI service UUID filter,
+  `connect` through `openBluetoothDevice`; the peripheral stays open until
+  `disconnect`. Permissions per API level; a missing one throws
+  `MidiPermissionDenied` and shows in `capabilities.missingPermissions`.
+- `network` is null: Android has no network session. The umbrella
+  composes the AppleMIDI session of aud_midi_network with
+  `MidiAndroidServiceAdvertiser` (`NsdManager`); mDNS browsing needs a
+  `MidiAndroidMulticastLock`.
+- Isolates: package:jni loads classes through the application class loader
+  its plugin captured and attaches threads on demand, so the backend runs
+  in any isolate. The application context comes from the shim's content
+  provider, or from the `context` parameter.
+
+Verified on the Android emulator (API 36, arm64) with the
+[example app](example/README.md) in a background isolate, debug and
+release build (R8):
+
+| Check | Result |
+| --- | --- |
+| Enumeration | MIDI 1.0 and UMP loopbacks, own MIDI 1.0 and UMP devices with `isOwn` |
+| MIDI 1.0 loopback through AMidi, 3018 bytes with a 3000-byte SysEx | bytes and order unchanged, timestamps back within 0–2 µs |
+| Packet due in 200 ms | timestamp equals the due time; arrives at once, a virtual device does not schedule |
+| UMP loopback through AMidi, 607 words with 300 MIDI 2.0 notes | words and order unchanged |
+| Latency from the Java receiver to Dart | 0.15–2.5 ms release, 7–12 ms debug |
+| Own virtual devices, MIDI 1.0 and UMP | data in both directions, the other client sending through `MidiInputPort` and AMidi |
+| `System.nanoTime()` stamp against the `CLOCK_MONOTONIC` reader | arrival 46–169 µs after the stamp: one clock |
+| `cancelPending`, `MidiInputPort.flush` | no error |
+| Bluetooth LE scan | starts and stops, finds nothing on the emulator |
+| `NsdManager`, multicast lock | `_apple-midi._udp` registered and unregistered; lock held |
+| `MidiEngine` over `AndroidMidiBackend` | typed messages unchanged; a note scheduled in software 1.5–1.9 ms after due; a MIDI 1.0 Note On to a MIDI 2.0 port arrives as MIDI 2.0 |
+| Release build | R8 keeps all shim classes; same report |
+
+Not verified: USB devices and real BLE-MIDI peripherals (no hardware),
+API levels below 33 (no UMP) and below 29 (sending only through
+`MidiInputPort`; that path ran on API 36 as the client of the own
+device), hotplug of real devices. Their logic is tested with fakes.
+
+Findings that shape the behaviour:
+
+- Android cuts data longer than 1015 bytes into packets, inside UMP words
+  too; the backend splits UMP data itself, between packets.
+- A `MidiDeviceService` receives the timestamp but nothing schedules for
+  it; only USB and Bluetooth devices sit behind the scheduler of the MIDI
+  service.
+- The `ServiceInfo` of a virtual device lies under the hidden property
+  key `service_info`; the shim reads it to recognise the app's own
+  devices.
+- package:jni finds the shim classes from background isolates without
+  extra setup; no class loader workaround is needed.
 
 ## Installation
 
 ```bash
 dart pub add aud_midi_android
 ```
+
+The package is an Android plugin without a Flutter dependency: Flutter
+builds the Java shim into the app, R8 keeps it through the shim's
+`consumer-rules.pro`. `minSdk` 24; AMidi is used from API 29, UMP devices
+appear from API 33.
+
+The app declares in `AndroidManifest.xml`:
+
+```xml
+<uses-feature android:name="android.software.midi" android:required="true" />
+<!-- Bluetooth LE MIDI -->
+<uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+<uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+    android:usesPermissionFlags="neverForLocation" />
+<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+<uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
+<!-- Network sessions -->
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+<uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+```
+
+The app requests the runtime permissions itself: `BLUETOOTH_SCAN` and
+`BLUETOOTH_CONNECT` from API 31, `ACCESS_FINE_LOCATION` below.
+
+A virtual device of the app, inside `<application>`:
+
+```xml
+<service
+    android:name="com.audanika.aud_midi_android.AudMidiDeviceService"
+    android:permission="android.permission.BIND_MIDI_DEVICE_SERVICE"
+    android:exported="true">
+    <intent-filter>
+        <action android:name="android.media.midi.MidiDeviceService" />
+    </intent-filter>
+    <meta-data
+        android:name="android.media.midi.MidiDeviceService"
+        android:resource="@xml/midi_device_info" />
+</service>
+```
+
+with `res/xml/midi_device_info.xml`:
+
+```xml
+<devices>
+  <device manufacturer="My company" product="My app">
+    <input-port name="My app in" />
+    <output-port name="My app out" />
+  </device>
+</devices>
+```
+
+A UMP device (API 33) uses `AudMidiUmpDeviceService` with the action
+`android.media.midi.MidiUmpDeviceService`, a `<property>` instead of
+`<meta-data>` and `<port name="…" />` entries. Several devices need one
+subclass each.
+
+## Documentation
+
+- [The plan of the aud_midi family](https://github.com/audmidi/aud_midi_pm/blob/main/doc/2026-Q4/tickets/2026-10-06-aud_midi_01-initial-midi-implementation.md)
+- [Example app](example/README.md)
+- [Guides](doc/guides/)
+
+## Code Examples
+
+```dart
+import 'package:aud_midi_android/aud_midi_android.dart';
+import 'package:aud_midi_core/aud_midi_core.dart';
+import 'package:aud_midi_standard/aud_midi_standard.dart';
+
+// Runs in an isolate of an Android app, e.g. the MIDI isolate.
+Future<void> main() async {
+  final engine = MidiEngine(backend: AndroidMidiBackend());
+  await engine.open();
+  for (final port in engine.outputs) {
+    final output = await engine.openOutput(port.id);
+    await output.send(const MidiNoteOn(channel: 0, note: 60, velocity: 100));
+  }
+  await engine.close();
+
+  final registration = await MidiAndroidServiceAdvertiser().register(
+    name: 'My session',
+    type: '_apple-midi._udp',
+    port: 5004,
+  );
+  await registration.unregister();
+}
+```
+
+## Regenerating the bindings
+
+The bindings are generated files in `lib/src/**/*.g.dart`. After a change
+of the Java shim, `jnigen.yaml` or `ffigen.yaml`:
+
+```bash
+# jnigen: android.media.midi, Bluetooth, NsdManager, WifiManager, the shim
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+export ANDROID_SDK_ROOT="$HOME/Library/Android/sdk"
+dart run jnigen:setup            # once: builds the API summarizer
+dart run jnigen --config jnigen.yaml
+
+# ffigen: AMidi from the NDK
+NDK="$ANDROID_SDK_ROOT/ndk/28.2.13676358"
+SYSROOT="$NDK/toolchains/llvm/prebuilt/darwin-x86_64/sysroot"
+dart run ffigen --config ffigen.yaml \
+  --compiler-opts "--target=aarch64-linux-android33 --sysroot=$SYSROOT"
+```
+
+Both use the Dart of the Flutter SDK (package:jni needs it) and produce
+the same files again.
+
+## How It Works
+
+- Dart talks to Android only through `MidiAndroidPlatform`. Its JNI
+  implementation and the AMidi glue are thin and run on Android only;
+  everything else is plain Dart, tested on the development machine with
+  fakes.
+- Java threads never wait for Dart: the shim's callbacks are listeners
+  that post to the isolate's port and return.
+- Receiving: MIDI thread → `AudMidiReceiver.onSend` copies → one signal →
+  the isolate drains the buffer → decode → port packets with times.
+- Sending: package time → `CLOCK_MONOTONIC` through the clock mapper →
+  AMidi or `MidiInputPort` with that timestamp.
 
 ## Contributing
 

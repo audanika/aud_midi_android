@@ -1,0 +1,28 @@
+name: aud_midi_android_example
+description: "Loopback check of aud_midi_android on an Android device or emulator."
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  aud_midi_android:
+    path: ../
+  aud_midi_core: any
+  aud_midi_standard: any
+  flutter:
+    sdk: flutter
+
+# The siblings of the aud_midi family, checked out next to this package.
+dependency_overrides:
+  aud_midi_core:
+    path: ../../aud_midi_core
+  aud_midi_standard:
+    path: ../../aud_midi_standard
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
