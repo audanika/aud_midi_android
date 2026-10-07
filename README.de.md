@@ -3,7 +3,7 @@
 Das Android-Backend von aud_midi: `android.media.midi` über jnigen-Bindings
 und einen kleinen Java-Shim, AMidi über FFI zum Senden.
 
-Teil der aud_midi-Familie, siehe [aud_midi](https://github.com/audanika/aud_midi).
+Teil der aud_midi-Familie, siehe [aud_midi](https://github.com/audmidi/aud_midi).
 
 ## Ziele
 
@@ -17,7 +17,7 @@ Teil der aud_midi-Familie, siehe [aud_midi](https://github.com/audanika/aud_midi
 ## Stand
 
 `AndroidMidiBackend` (Name `android`) implementiert `MidiBackend` aus
-[aud_midi_core](https://github.com/audanika/aud_midi_core):
+[aud_midi_core](https://github.com/audmidi/aud_midi_core):
 
 - Ports: jeder Port jedes Geräts, das der MIDI-Dienst kennt: USB,
   Bluetooth und die virtuellen Geräte anderer Apps; ab API 33 beide
@@ -166,7 +166,7 @@ eine Unterklasse.
 
 ## Dokumentation
 
-- [Der Plan der aud_midi-Familie](https://github.com/audanika/aud_midi_pm/blob/main/doc/2026-Q4/tickets/2026-10-06-aud_midi_01-initial-midi-implementation.md)
+- [Der Plan der aud_midi-Familie](https://github.com/audmidi/aud_midi_pm/blob/main/doc/2026-Q4/tickets/2026-10-06-aud_midi_01-initial-midi-implementation.md)
 - [Beispiel-App](example/README.md)
 - [Guides](doc/guides/)
 
